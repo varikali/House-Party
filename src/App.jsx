@@ -1,28 +1,25 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { 
-  Calendar as CalendarIcon, 
-  List, 
-  Search, 
-  Filter, 
-  MapPin, 
-  Clock, 
-  Ticket, 
-  RefreshCw, 
-  PlusCircle, 
-  CheckCircle2, 
-  ChevronLeft, 
-  ChevronRight, 
-  ExternalLink, 
-  Download, 
-  CalendarPlus, 
-  X, 
-  Music, 
-  Sparkles, 
-  DollarSign, 
-  Share2, 
-  Radio, 
-  SlidersHorizontal,
-  Info
+import React, { useState, useMemo } from 'react';
+import {
+  Calendar as CalendarIcon,
+  List,
+  Search,
+  MapPin,
+  Clock,
+  Ticket,
+  RefreshCw,
+  PlusCircle,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  ExternalLink,
+  Download,
+  CalendarPlus,
+  X,
+  Music,
+  Sparkles,
+  DollarSign,
+  Radio,
+  SlidersHorizontal
 } from 'lucide-react';
 
 // Subgenre color mapping with distinct neon accents
@@ -50,7 +47,7 @@ const VENUES = [
   { name: 'Paragon', borough: 'Brooklyn', area: 'Bushwick' }
 ];
 
-// Seed Events (NYC 2026/2027 House Music Schedule)
+// Seed Events (NYC House Music Schedule)
 const INITIAL_EVENTS = [
   {
     id: 'evt-1',
@@ -58,7 +55,7 @@ const INITIAL_EVENTS = [
     venue: 'Nowadays',
     borough: 'Queens',
     subgenre: 'Deep House',
-    date: '2026-10-24', // YYYY-MM-DD
+    date: '2026-10-24',
     startTime: '22:00',
     endTime: '06:00',
     advancePrice: 25,
@@ -261,7 +258,7 @@ export default function App() {
   const [lastSyncDate, setLastSyncDate] = useState('Monday, Oct 19, 2026 at 04:00 AM');
   const [syncMessage, setSyncMessage] = useState('');
 
-  // Calendar State (Defaulting to October 2026 as per setup)
+  // Calendar State (Defaulting to October 2026)
   const [currentMonthDate, setCurrentMonthDate] = useState(new Date(2026, 9, 1)); // Oct 2026
 
   // Filters State
@@ -287,11 +284,41 @@ export default function App() {
     description: ''
   });
 
+  // Helper function to resolve smart ticketing URLs
+  const getSmartTicketUrl = (event) => {
+    // If explicit custom URL exists and isn't just a root domain, use it
+    if (event.ticketUrl && 
+        !event.ticketUrl.endsWith('ra.co') && 
+        !event.ticketUrl.endsWith('ra.co/') && 
+        !event.ticketUrl.endsWith('dice.fm') && 
+        !event.ticketUrl.endsWith('dice.fm/')) {
+      return event.ticketUrl;
+    }
+
+    // Generate smart Resident Advisor search query encoded with title + venue
+    const searchQuery = encodeURIComponent(`${event.title} ${event.venue}`);
+    return `https://ra.co/events/us/newyork?search=${searchQuery}`;
+  };
+
+  // Helper handler for safely opening ticket links
+  const handleTicketClick = (e, event) => {
+    if (e) e.stopPropagation();
+    const url = getSmartTicketUrl(event);
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
+  // Helper for opening external URLs cleanly
+  const openExternalUrl = (url) => {
+    if (!url) return;
+    const targetUrl = url.startsWith('http') ? url : `https://${url}`;
+    window.open(targetUrl, '_blank', 'noopener,noreferrer');
+  };
+
   // Simulated Sync Engine Function
   const handleManualSync = () => {
     setIsSyncing(true);
     setSyncMessage('Connecting to venue API gateways (Resident Advisor, Dice.fm, Eventbrite)...');
-    
+
     setTimeout(() => {
       setSyncMessage('Parsing house event updates for 10 NYC Venues...');
     }, 1000);
@@ -328,8 +355,8 @@ export default function App() {
   const filteredEvents = useMemo(() => {
     return events.filter(evt => {
       const matchesSearch = evt.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                            evt.lineup.some(artist => artist.toLowerCase().includes(searchTerm.toLowerCase())) ||
-                            evt.venue.toLowerCase().includes(searchTerm.toLowerCase());
+        evt.lineup.some(artist => artist.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        evt.venue.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesGenre = selectedSubgenre === 'All' || evt.subgenre === selectedSubgenre;
       const matchesBorough = selectedBorough === 'All' || evt.borough === selectedBorough;
       const matchesVenue = selectedVenue === 'All' || evt.venue === selectedVenue;
@@ -437,7 +464,7 @@ export default function App() {
   const generateGoogleCalUrl = (evt) => {
     const startIso = evt.date.replace(/-/g, '') + 'T' + evt.startTime.replace(':', '') + '00Z';
     const endIso = evt.date.replace(/-/g, '') + 'T' + evt.endTime.replace(':', '') + '00Z';
-    const details = encodeURIComponent(`${evt.description}\n\nLineup: ${evt.lineup.join(', ')}\nTickets: ${evt.ticketUrl}`);
+    const details = encodeURIComponent(`${evt.description}\n\nLineup: ${evt.lineup.join(', ')}\nTickets: ${getSmartTicketUrl(evt)}`);
     const location = encodeURIComponent(`${evt.venue}, NYC`);
     const title = encodeURIComponent(evt.title);
     return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${startIso}/${endIso}&details=${details}&location=${location}`;
@@ -446,7 +473,7 @@ export default function App() {
   const downloadIcsFile = (evt) => {
     const startIso = evt.date.replace(/-/g, '') + 'T' + evt.startTime.replace(':', '') + '00';
     const endIso = evt.date.replace(/-/g, '') + 'T' + evt.endTime.replace(':', '') + '00';
-    
+
     const icsContent = [
       'BEGIN:VCALENDAR',
       'VERSION:2.0',
@@ -471,13 +498,11 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans antialiased selection:bg-fuchsia-500 selection:text-white flex flex-col">
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-fuchsia-500 selection:text-white relative overflow-x-hidden">
+      
       {/* BACKGROUND NEON GLOW DECORATIONS */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-        <div className="absolute -top-40 -left-40 w-96 h-96 bg-fuchsia-600/15 rounded-full blur-[120px]" />
-        <div className="absolute top-1/3 -right-40 w-96 h-96 bg-purple-600/15 rounded-full blur-[120px]" />
-        <div className="absolute -bottom-40 left-1/3 w-96 h-96 bg-cyan-600/15 rounded-full blur-[120px]" />
-      </div>
+      <div className="fixed top-0 left-1/4 w-96 h-96 bg-fuchsia-600/10 rounded-full blur-3xl pointer-events-none -z-0" />
+      <div className="fixed bottom-0 right-1/4 w-[30rem] h-[30rem] bg-cyan-600/10 rounded-full blur-3xl pointer-events-none -z-0" />
 
       {/* TOP HEADER / NAVBAR */}
       <header className="sticky top-0 z-40 backdrop-blur-xl bg-slate-950/80 border-b border-slate-800/80 shadow-2xl">
@@ -664,7 +689,7 @@ export default function App() {
                 onClick={() => setSelectedSubgenre(genre)}
                 className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition flex items-center gap-1.5 border ${
                   selectedSubgenre === genre
-                    ? `${config.bg} ${config.text} ${config.border} ring-1 ring-fuchsia-500`
+                    ? `${config.bg} ${config.text}${config.border} ring-1 ring-fuchsia-500`
                     : 'bg-slate-950 border-slate-800/80 text-slate-400 hover:text-slate-200'
                 }`}
               >
@@ -730,7 +755,7 @@ export default function App() {
                 return (
                   <div
                     key={index}
-                    className={`min-h-[90sm:110px] p-1.5 sm:p-2 rounded-xl border flex flex-col justify-between transition-all ${
+                    className={`min-h-[110px] p-1.5 sm:p-2 rounded-xl border flex flex-col justify-between transition-all ${
                       dayObj.isCurrentMonth
                         ? 'bg-slate-950/70 border-slate-800/80 hover:border-slate-700'
                         : 'bg-slate-950/20 border-slate-900/50 text-slate-600 opacity-40'
@@ -766,7 +791,6 @@ export default function App() {
                       {dayEvents.length > 2 && (
                         <div 
                           onClick={() => {
-                            // Quick switch to list view for this date
                             setSearchTerm(dayObj.dateStr);
                             setCurrentView('list');
                           }}
@@ -882,15 +906,13 @@ export default function App() {
                         >
                           View Details
                         </button>
-                        <a
-                          href={evt.ticketUrl}
-                          target="_blank"
-                          rel="noreferrer"
+                        <button
+                          onClick={(e) => handleTicketClick(e, evt)}
                           className="px-3 py-2 rounded-xl bg-fuchsia-600 hover:bg-fuchsia-500 text-white text-xs font-semibold transition flex items-center gap-1 shadow-md"
                         >
                           <Ticket className="w-3.5 h-3.5" />
                           <span>Tickets</span>
-                        </a>
+                        </button>
                       </div>
                     </div>
                   );
@@ -970,28 +992,24 @@ export default function App() {
                 <MapPin className="w-4 h-4 text-slate-500" />
                 <span>Venue Location: NYC Metro Area</span>
               </div>
-              <a
-                href={`https://maps.google.com/?q=${encodeURIComponent(selectedEvent.venue + ' NYC')}`}
-                target="_blank"
-                rel="noreferrer"
+              <button
+                onClick={() => openExternalUrl(`https://maps.google.com/?q=${encodeURIComponent(selectedEvent.venue + ' NYC')}`)}
                 className="text-fuchsia-400 hover:underline font-semibold flex items-center gap-1 text-[11px]"
               >
                 Open Google Maps <ExternalLink className="w-3 h-3" />
-              </a>
+              </button>
             </div>
 
             {/* Calendar Export & Ticket Buttons */}
             <div className="space-y-2 pt-2 border-t border-slate-800">
               <div className="grid grid-cols-2 gap-2">
-                <a
-                  href={generateGoogleCalUrl(selectedEvent)}
-                  target="_blank"
-                  rel="noreferrer"
+                <button
+                  onClick={() => openExternalUrl(generateGoogleCalUrl(selectedEvent))}
                   className="py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center justify-center gap-1.5 transition"
                 >
                   <CalendarPlus className="w-3.5 h-3.5 text-blue-400" />
                   <span>Google Calendar</span>
-                </a>
+                </button>
                 <button
                   onClick={() => downloadIcsFile(selectedEvent)}
                   className="py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center justify-center gap-1.5 transition"
@@ -1001,15 +1019,13 @@ export default function App() {
                 </button>
               </div>
 
-              <a
-                href={selectedEvent.ticketUrl}
-                target="_blank"
-                rel="noreferrer"
+              <button
+                onClick={(e) => handleTicketClick(e, selectedEvent)}
                 className="w-full py-3 rounded-xl bg-gradient-to-r from-fuchsia-600 to-purple-600 hover:from-fuchsia-500 hover:to-purple-500 text-white font-bold text-xs transition text-center shadow-lg shadow-fuchsia-600/30 flex items-center justify-center gap-2"
               >
                 <Ticket className="w-4 h-4" />
                 <span>Get Tickets Now</span>
-              </a>
+              </button>
             </div>
           </div>
         </div>
